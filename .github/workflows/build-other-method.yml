@@ -1,0 +1,126 @@
+name: Build bootctl with AIDL support
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - { abi: "arm64-v8a", triple: "aarch64-linux-android", api: "30" }
+          - { abi: "armeabi-v7a", triple: "armv7a-linux-androideabi", api: "30" }
+
+    env:
+      NDK_VERSION: r26d
+
+    steps:
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y git curl unzip python3
+
+    - name: Download Android NDK
+      run: |
+        curl -LO https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip
+        unzip -q android-ndk-${NDK_VERSION}-linux.zip
+        echo "NDK_DIR=$PWD/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Use AIDL from Android SDK
+      run: |
+        echo "ANDROID_HOME=$ANDROID_HOME"
+        AIDL_PATH=$(find "$ANDROID_HOME" -type f -name aidl -executable | head -n1)
+        echo "AIDL=$AIDL_PATH" >> $GITHUB_ENV
+        echo "Using AIDL from: $AIDL_PATH"
+
+    - name: Clone needed AOSP repos
+      run: |
+        mkdir -p aosp && cd aosp
+        git clone --depth=1 https://android.googlesource.com/platform/system/extras
+        git clone --depth=1 https://android.googlesource.com/platform/hardware/interfaces
+        git clone --depth=1 https://android.googlesource.com/platform/frameworks/native
+        git clone --depth=1 https://android.googlesource.com/platform/system/libbase
+        git clone --depth=1 https://android.googlesource.com/platform/system/core
+        # Extract libutils from system/core:
+        mkdir -p system/libutils
+        cp -r core/libutils system/libutils
+        ls -la .
+
+    - name: Generate AIDL headers
+      run: |
+        AIDL_SRC=aosp/interfaces/boot/aidl/android
+        OUT_CPP=out/aidl_gen/cpp
+        OUT_HDR=out/aidl_gen/include
+        mkdir -p "$OUT_CPP" "$OUT_HDR"
+        
+        find "$AIDL_SRC" -name '*.aidl' | while read -r file; do
+          $AIDL --lang=ndk \
+            -I aosp/interfaces/boot/aidl \
+            -o "$OUT_CPP" \
+            -h "$OUT_HDR" \
+            "$file"
+        done
+
+    - name: Build libbinder_ndk
+      run: |
+        export NDK=$PWD/android-ndk-${NDK_VERSION}
+        mkdir -p out/binder_ndk
+        cd aosp/frameworks/native/libs/binder/ndk
+        # Build using CMake and NDK toolchain
+        mkdir build && cd build
+        cmake .. \
+          -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=${{ matrix.arch.abi }} \
+          -DANDROID_PLATFORM=android-${{ matrix.arch.api }} \
+          -DBUILD_SHARED_LIBS=OFF
+        make -j$(nproc)
+        cp libbinder_ndk.a ../../../../../../out/binder_ndk/
+
+    - name: Compile bootctl
+      run: |
+        export NDK_DIR=$PWD/android-ndk-${NDK_VERSION}
+        export PATH=$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+        export CC=${{ matrix.arch.triple }}${{ matrix.arch.api }}-clang++
+        export SYSROOT=$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+
+        SRC=aosp/system/extras/bootctl/bootctl.cpp
+        AIDL_GEN=out/aidl_gen
+
+        INCLUDES="
+          -Iaosp/system/libbase/include
+          -Iaosp/system/core/include
+          -Iaosp/system/core/fs_mgr/include
+          -Iaosp/system/core/bootctrl/include
+          -Iaosp/system/core/bootloader_message/include
+          -Iaosp/system/core/healthd/include
+          -Iaosp/system/libutils/include
+          -Iaosp/system/extras/bootctl
+          -Iaosp/interfaces/boot/1.0
+          -Iaosp/interfaces/boot/1.1
+          -Iaosp/interfaces/boot/1.2
+          -Iaosp/interfaces/boot/aidl/android/hardware/boot
+          -I$AIDL_GEN
+        "
+
+        $CC $SRC $INCLUDES -o bootctl-${{ matrix.arch.abi }} \
+          -Wall -Werror \
+          -llog -lcutils -landroid -ldl \
+          $SYSROOT/usr/lib/${{ matrix.arch.triple }}/${{ matrix.arch.api }}/liblog.so \
+          out/binder_ndk/libbinder_ndk.a
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: bootctl-${{ matrix.arch.abi }}
+        path: bootctl-${{ matrix.arch.abi }}

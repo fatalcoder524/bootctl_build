@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote name="aosp" fetch="https://android.googlesource.com/"  />
+
+  <!-- Use default settings from parent manifest -->
+  <default revision="main" remote="aosp" sync-j="4" />
+
+  <!-- bootctl source -->
+  <project path="system/extras/bootctl" name="platform/system/extras" revision="main" clone-depth="1" />
+
+  <!-- HALs -->
+  <project path="hardware/interfaces" name="platform/hardware/interfaces" revision="main" clone-depth="1" />
+
+  <!-- Core libraries -->
+  <project path="frameworks/native" name="platform/frameworks/native" revision="main" clone-depth="1" />
+  <project path="frameworks/hardware/interfaces" name="platform/frameworks/hardware/interfaces" revision="main" clone-depth="1" />
+
+  <!-- build projects -->
+  <project path="build" name="platform/build" />
+  <project path="vendor/google/release/" name="platform/build/release" />
+  <project path="build/make" name="platform/build" >
+    <linkfile src="tools" dest="build/tools" />
+  </project>
+  <project path="build/bazel" name="platform/build/bazel" groups="pdk" clone-depth="1" >
+    <linkfile src="bazel.WORKSPACE" dest="WORKSPACE" />
+    <linkfile src="bazel.BUILD" dest="BUILD" />
+  </project>
+  <project path="build/bazel_common_rules" name="platform/build/bazel_common_rules" groups="pdk" clone-depth="1" />
+  <project path="build/blueprint" name="platform/build/blueprint" clone-depth="1" />
+  <project path="build/soong" name="platform/build/soong" >
+    <linkfile src="root.bp" dest="Android.bp" />
+    <linkfile src="bootstrap.bash" dest="bootstrap.bash" />
+  </project>
+  <project path="external/golang-protobuf" name="platform/external/golang-protobuf" clone-depth="1" />
+  <!-- <project path="packages/modules/common" name="platform/packages/modules/common" groups="pdk-cw-fs,pdk-fs" clone-depth="1" /> -->
+  <project path="prebuilts/build-tools" name="platform/prebuilts/build-tools" clone-depth="1" />
+
+  <!-- VNDK prebuilts -->
+  <project path="prebuilts/vndk/v30" name="platform/prebuilts/vndk/v30/" revision="main" clone-depth="1" />
+  <project path="prebuilts/vndk/v31" name="platform/prebuilts/vndk/v31/" revision="main" clone-depth="1" />
+  <project path="prebuilts/vndk/v32" name="platform/prebuilts/vndk/v32/" revision="main" clone-depth="1" />
+  <project path="prebuilts/vndk/v33" name="platform/prebuilts/vndk/v33/" revision="main" clone-depth="1" />
+  <project path="prebuilts/vndk/v34" name="platform/prebuilts/vndk/v34/" revision="main" clone-depth="1" />
+
+  <!-- toolchain linux prebuilts -->
+  <project path="prebuilts/clang/host/linux-x86" name="platform/prebuilts/clang/host/linux-x86" groups="linux" clone-depth="1" />
+  <project path="prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8" name="platform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8" clone-depth="1" />
+  <project path="prebuilts/go/linux-x86" name="platform/prebuilts/go/linux-x86" groups="linux" clone-depth="1" />
+
+  <!-- dependency prebuilts -->
+  <project path="prebuilts/clang-tools" name="platform/prebuilts/clang-tools" clone-depth="1" />
+  <!-- <project path="prebuilts/misc" name="platform/prebuilts/misc" clone-depth="1" /> -->
+  <project path="prebuilts/tools" name="platform/prebuilts/tools" groups="pdk,tools" clone-depth="1" />
+  <!-- <project path="prebuilts/sdk" name="platform/prebuilts/sdk" clone-depth="1" /> -->
+  <!-- dependency source -->
+  <!-- <project path="external/clang" name="platform/external/clang" clone-depth="1" /> -->
+  <!-- <project path="external/compiler-rt" name="platform/external/compiler-rt" clone-depth="1" /> -->
+  <!-- <project path="external/go-cmp" name="platform/external/go-cmp" clone-depth="1" /> -->
+  <!-- <project path="external/go-creachadair-shell" name="platform/external/go-creachadair-shell" clone-depth="1" /> -->
+  <!-- <project path="external/go-creachadair-stringset" name="platform/external/go-creachadair-stringset" clone-depth="1" /> -->
+  <!-- <project path="external/go-etree" name="platform/external/go-etree" clone-depth="1" /> -->
+  <!-- <project path="external/go-subcommands" name="platform/external/go-subcommands" clone-depth="1" /> -->
+  <!-- <project path="external/golang-x-sync" name="platform/external/golang-x-sync" clone-depth="1" /> -->
+  <!-- <project path="external/golang-x-sys" name="platform/external/golang-x-sys" clone-depth="1" /> -->
+  <!-- <project path="external/golang-x-tools" name="platform/external/golang-x-tools" clone-depth="1" /> -->
+  <project path="external/protobuf" name="platform/external/protobuf" clone-depth="1" />
+  <project path="external/starlark-go" name="platform/external/starlark-go" clone-depth="1" />
+  <!-- <project path="external/nsjail" name="platform/external/nsjail" clone-depth="1" /> -->
+  <project path="sdk" name="platform/sdk" clone-depth="1" />
+  <project path="system/apex" name="platform/system/apex" groups="pdk" clone-depth="1" />
+  <project path="system/core" name="platform/system/core" clone-depth="1" />
+  <project path="system/libbase" name="platform/system/libbase" clone-depth="1" />
+  <project path="system/libhwbinder" name="platform/system/libhwbinder" clone-depth="1" />
+  <!-- <project path="system/libziparchive" name="platform/system/libziparchive" clone-depth="1" /> -->
+  <project path="system/logging" name="platform/system/logging" clone-depth="1" />
+  <!-- <project path="system/server_configurable_flags" name="platform/system/server_configurable_flags" clone-depth="1" /> -->
+  <!-- <project path="system/tools/xsdc" name="platform/system/tools/xsdc" clone-depth="1" /> -->
+  <!-- <project path="system/unwinding" name="platform/system/unwinding" clone-depth="1" /> -->
+  <project path="test/app_compat/csuite" name="platform/test/app_compat/csuite" clone-depth="1" />
+  <project path="tools/asuite" name="platform/tools/asuite" clone-depth="1" />
+
+  <project path="system/tools/aidl" name="platform/system/tools/aidl" clone-depth="1" />
+  <project path="system/tools/hidl" name="platform/system/tools/hidl" clone-depth="1" />
+  <project name="toolchain/go" clone-depth="1" />
+  <project name="toolchain/m4" clone-depth="1" />
+  <project name="toolchain/make" clone-depth="1" />
+  <project name="toolchain/xz" clone-depth="1" />
+  <project path="toolchain/pgo-profiles" name="platform/toolchain/pgo-profiles" revision="main" clone-depth="1" />
+  <!-- rust -->
+  <project path="external/rust/android-crates-io" name="platform/external/rust/android-crates-io" groups="pdk" clone-depth="1" />
+  <project path="external/rust/crates/openssl" name="platform/external/rust/crates/openssl" groups="pdk" clone-depth="1" />
+  <project path="external/rust/crates/vhost-device-vsock" name="platform/external/rust/crates/vhost-device-vsock" groups="pdk" clone-depth="1" />
+  <project path="external/rust/cxx" name="platform/external/rust/cxx" groups="pdk" clone-depth="1" />
+  <project path="external/rust/autocxx" name="platform/external/rust/autocxx" groups="pdk" clone-depth="1" />
+  <project path="external/rust/pica" name="platform/external/rust/pica" groups="pdk" clone-depth="1" />
+  <project path="packages/modules/adb" name="platform/packages/modules/adb" groups="pdk" clone-depth="1" />
+  <project path="prebuilts/rust" name="platform/prebuilts/rust" groups="pdk" clone-depth="1" />
+</manifest>
