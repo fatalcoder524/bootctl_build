@@ -1,0 +1,112 @@
+name: Build Bootctl Minimal
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Maximize Build Space
+        uses: AdityaGarg8/remove-unwanted-software@v5
+        with:
+          remove-dotnet: 'true'          # Frees ~2 GB
+          remove-android: 'true'         # Frees ~9 GB
+          remove-haskell: 'true'         # Frees ~5.2 GB
+          remove-codeql: 'true'          # Frees ~5.4 GB
+          remove-docker-images: 'true'   # Frees ~3.2 GB
+          remove-large-packages: 'true'  # Frees ~3.1 GB
+          remove-swapfile: 'true'        # Frees ~4 GB
+          remove-cached-tools: 'true'   # Avoid unless confirmed safe
+          verbose: 'false'                # Enable detailed logging
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git wget unzip python3 openjdk-17-jdk make bc bison flex gcc g++ libssl-dev libxml2-utils zip
+    
+      - name: Checkout Minimal AOSP Components
+        run: |
+          mkdir aosp && cd aosp
+          
+          # Core build system
+          git clone --depth=1 https://android.googlesource.com/platform/build build/make
+          # Create symlinks for files
+          ln -sf ../build/make/CleanSpec.mk build/CleanSpec.mk
+          ln -sf ../build/make/buildspec.mk.default build/buildspec.mk.default
+          ln -sf ../build/make/envsetup.sh build/envsetup.sh
+          
+          # Create symlinks for directories
+          ln -sf ../build/make/core build/core
+          ln -sf ../build/make/target build/target
+          ln -sf ../build/make/tools build/tools
+          rm -rf build/make/tools/ide_query
+          
+          git clone --depth=1 https://android.googlesource.com/platform/build/soong build/soong
+          git clone --depth=1 https://android.googlesource.com/platform/build/blueprint build/blueprint
+          git clone --depth=1 https://android.googlesource.com/platform/build/kati build/kati
+          git clone --depth=1 https://android.googlesource.com/platform/external/ninja prebuilts/ninja/linux-x86
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/go/linux-x86 prebuilts/go/linux-x86
+          git clone --depth=1 https://android.googlesource.com/platform/external/go-cmp external/go-cmp
+          git clone --depth=1 https://android.googlesource.com/platform/external/protobuf external/protobuf
+          git clone --depth=1 https://android.googlesource.com/platform/external/golang-protobuf external/golang-protobuf
+          ln -sf external/protobuf external/golang-protobuf/proto
+          git clone --depth=1 https://android.googlesource.com/platform/external/starlark-go external/starlark-go
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/build-tools prebuilts/build-tools
+          git clone --depth=1 https://android.googlesource.com/platform/build/release build/release
+          ln -sf vendor/google/release build/release
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/vndk/v30/ prebuilts/vndk/v30
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/vndk/v31/ prebuilts/vndk/v31
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/vndk/v32/ prebuilts/vndk/v32
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/vndk/v33/ prebuilts/vndk/v33
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/vndk/v34/ prebuilts/vndk/v34
+          git clone --depth=1 https://android.googlesource.com/toolchain/pgo-profiles toolchain/pgo-profiles
+          
+          # Dependencies
+          git clone --depth=1 https://android.googlesource.com/platform/bionic bionic
+          git clone --depth=1 https://android.googlesource.com/platform/external/libcxx external/libcxx
+          
+          git clone --depth=1 https://android.googlesource.com/platform/system/core system/core
+          cd system/core
+          rm -rf gatekeeperd trusty/confirmationui init libutils
+          cd ../..
+          git clone --depth=1 https://android.googlesource.com/platform/system/libhidl system/libhidl
+          git clone --depth=1 https://android.googlesource.com/platform/system/libhwbinder system/libhwbinder
+          git clone --depth=1 https://android.googlesource.com/platform/frameworks/native frameworks/native
+          cd frameworks/native
+          rm -rf services/powermanager libs/gralloc libs/tonemap libs/shaders libs/renderengine cmds/lshal libs/ui cmds/installd
+          cd ../..
+          git clone --depth=1 https://android.googlesource.com/platform/hardware/interfaces hardware/interfaces
+          cd hardware/interfaces
+          rm -rf audio authsecret automotive biometrics bluetooth broadcastradio camera cas compatibility_matrices confirmationui \
+          contexthub drm dumpstate fastboot gatekeeper gnss graphics health identity input ir keymaster light macsec media memtrack neuralnetworks \
+          nfc oemlock power radio rebootescrow renderscript secure_element security sensors soundtrigger staging tests \
+          tetheroffload thermal threadnetwork tv usb uwb vibrator virtualization vr weaver wifi
+          cd ../..
+          
+          git clone --depth=1 https://android.googlesource.com/platform/system/sepolicy system/sepolicy
+          git clone --depth=1 https://android.googlesource.com/platform/hardware/libhardware hardware/libhardware
+          git clone --depth=1 https://android.googlesource.com/platform/system/tools/mkbootimg system/tools/mkbootimg
+          git clone --depth=1 https://android.googlesource.com/platform/system/tools/aidl system/tools/aidl
+          git clone --depth=1 https://android.googlesource.com/platform/system/tools/hidl system/tools/hidl
+          git clone --depth=1 https://android.googlesource.com/platform/system/tools/xsdc system/tools/xsdc
+          
+          # Bootctl source
+          git clone --depth=1 https://android.googlesource.com/platform/system/extras system/extras
+          
+          df -h
+    
+      - name: Setup Build Environment & Build bootctl
+        run: |
+          cd aosp
+          source build/envsetup.sh && lunch || true
+          lunch aosp_arm64 trunk_staging eng 
+          m bootctl
+    
+      - name: Upload bootctl binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootctl
+          path: aosp/out/target/product/generic_arm64/system/bin/bootctl
+

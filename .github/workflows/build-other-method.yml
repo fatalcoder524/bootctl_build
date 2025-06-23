@@ -1,8 +1,6 @@
 name: Build bootctl with AIDL (arm64 + armeabi-v7a)
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
